@@ -71,3 +71,9 @@ amplitude 0.5 and white Gaussian noise with standard deviation 0.3.
 8. **How is SNR defined here?** Signal power over error power in dB, where
    the error is the difference from the clean 50 Hz reference. Edge samples
    affected by the filter start-up transient are excluded.
+
+## Visual showcase
+
+An interactive, plain-language walkthrough of this project and the companion
+[hammer-test](https://github.com/m0hit-tvm/hammer-test) project lives at
+**https://m0hit-tvm.github.io/fir-noise-filter/** (source in `docs/`).
