@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Problem 1 (DSP): Clean a noisy sensor signal with an FIR low-pass filter.
+FIR noise filter: cleaning a noisy sensor signal with a linear-phase FIR low-pass.
 
 Scenario
 --------
