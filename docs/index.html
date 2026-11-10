@@ -3,399 +3,269 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Signal Processing Portfolio</title>
-<meta name="description" content="Two signal-processing projects explained visually: cleaning a noisy sensor signal, and finding how a machine part vibrates from a single hammer tap.">
+<title>FIR Noise Filter</title>
+<meta name="description" content="Recovering a clean sensor signal from interference and noise with a hand-designed FIR filter. Live, interactive walkthrough.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
 <style>
 :root{
   color-scheme:light;
-  --page:#f9f9f7;--surface:#fcfcfb;--surface-2:#f1f1ee;
-  --ink:#0b0b0b;--ink-2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;
-  --border:rgba(11,11,11,.10);--shadow:0 1px 2px rgba(11,11,11,.05),0 12px 32px -12px rgba(11,11,11,.18);
-  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s1-soft:rgba(42,120,214,.12);
-  --good:#006300;--radius:18px;
+  --page:#f6f9fc;--surface:#ffffff;--surface-2:#eef3f9;
+  --ink:#0a1628;--ink-2:#4a5a70;--muted:#7d8a9c;--grid:#e3e9f1;--axis:#c5cfdc;
+  --border:rgba(10,22,40,.10);--shadow:0 1px 0 rgba(10,22,40,.04),0 10px 30px -14px rgba(29,111,224,.25);
+  --s1:#1d6fe0;--s2:#e8641f;--s3:#1aa877;--s1-soft:rgba(29,111,224,.10);--accent-grad:linear-gradient(90deg,#1d6fe0,#19b5d9);
+  --wave:rgba(29,111,224,.22);--dots:rgba(10,22,40,.12);
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --page:#0d0d0d;--surface:#1a1a19;--surface-2:#222221;
-    --ink:#f0efec;--ink-2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;
-    --border:rgba(255,255,255,.10);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -12px rgba(0,0,0,.6);
-    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s1-soft:rgba(57,135,229,.16);--good:#0ca30c;
+    --page:#0b1220;--surface:#111a2b;--surface-2:#182338;
+    --ink:#eef3fa;--ink-2:#b4c0d3;--muted:#7d8a9c;--grid:#1f2b40;--axis:#2c3a52;
+    --border:rgba(255,255,255,.10);--shadow:0 1px 0 rgba(0,0,0,.3),0 14px 34px -14px rgba(0,0,0,.7);
+    --s1:#3b82e6;--s2:#dd6626;--s3:#179f74;--s1-soft:rgba(59,130,230,.16);--accent-grad:linear-gradient(90deg,#3b82e6,#2ec4e6);
+    --wave:rgba(59,130,230,.28);--dots:rgba(255,255,255,.08);
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --page:#0d0d0d;--surface:#1a1a19;--surface-2:#222221;
-  --ink:#f0efec;--ink-2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;
-  --border:rgba(255,255,255,.10);--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -12px rgba(0,0,0,.6);
-  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s1-soft:rgba(57,135,229,.16);--good:#0ca30c;
+  --page:#0b1220;--surface:#111a2b;--surface-2:#182338;
+  --ink:#eef3fa;--ink-2:#b4c0d3;--muted:#7d8a9c;--grid:#1f2b40;--axis:#2c3a52;
+  --border:rgba(255,255,255,.10);--shadow:0 1px 0 rgba(0,0,0,.3),0 14px 34px -14px rgba(0,0,0,.7);
+  --s1:#3b82e6;--s2:#dd6626;--s3:#179f74;--s1-soft:rgba(59,130,230,.16);--accent-grad:linear-gradient(90deg,#3b82e6,#2ec4e6);
+  --wave:rgba(59,130,230,.28);--dots:rgba(255,255,255,.08);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--page);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(var(--dots) 1px,transparent 1px);background-size:22px 22px}
 a{color:var(--s1);text-decoration:none}a:hover{text-decoration:underline}
-.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.page{position:relative;z-index:1}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 
-/* nav */
-.nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:color-mix(in srgb,var(--page) 80%,transparent);border-bottom:1px solid var(--border)}
-.nav .wrap{display:flex;align-items:center;gap:18px;height:58px}
-.brand{font-weight:700;letter-spacing:-.01em}
-.nav .links{display:flex;gap:16px;margin-left:auto;font-size:14px;color:var(--ink-2)}
-.nav .links a{color:var(--ink-2)}
-.btn{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.top{display:flex;align-items:center;gap:16px;height:64px}
+.top .id{display:flex;align-items:center;gap:10px;font-weight:600;font-family:"Space Grotesk"}
+.top .id i{width:28px;height:28px;border-radius:6px;background:var(--accent-grad);display:inline-block}
+.top .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;font-weight:500}
 .btn:hover{background:var(--surface-2)}
+.btn.ghost{background:transparent}
 
-/* hero */
-.hero{padding:72px 0 40px}
-.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--s1)}
-h1{font-size:clamp(32px,5vw,52px);line-height:1.08;letter-spacing:-.03em;margin:10px 0 16px;font-weight:800}
-.lede{font-size:18px;color:var(--ink-2);max-width:640px;margin:0}
-.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
-.chip{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-size:14px;font-weight:500;color:var(--ink);box-shadow:var(--shadow)}
-.chip .dot{width:10px;height:10px;border-radius:50%;background:var(--s1)}
-.chip.two .dot{background:var(--s2)}
+.hero{padding:70px 0 44px;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:end}
+.kicker{font-family:"IBM Plex Mono";font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--s1);font-weight:500}
+h1{font-size:clamp(36px,5.4vw,60px);line-height:1.02;letter-spacing:-.035em;margin:12px 0 18px;font-weight:700}
+h1 em{font-style:normal;background:var(--accent-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:18px;color:var(--ink-2);max-width:560px;margin:0}
+.specs{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px}
+.spec{border-left:2px solid var(--s1);padding:4px 0 4px 12px}
+.spec .k{color:var(--muted);font-family:"IBM Plex Mono";font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.spec .v{font-weight:600;color:var(--ink)}
 
-/* sections */
-section.project{padding:56px 0}
-.phead{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:26px}
-.num{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-h2{font-size:clamp(26px,3.4vw,36px);letter-spacing:-.025em;line-height:1.15;margin:0}
-.story{font-size:17px;color:var(--ink-2);max-width:720px;margin:6px 0 0}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:26px 0}
-.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
-.tile .lab{font-size:13px;color:var(--muted);font-weight:500}
-.tile .val{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px}
-.tile .sub{font-size:13px;color:var(--ink-2)}
-.tile .val.good{color:var(--good)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 18px 10px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
-.card:hover{transform:translateY(-2px)}
-.card.full{grid-column:1/-1}
-.card h3{margin:0 0 2px;font-size:16px;font-weight:600;letter-spacing:-.01em}
-.card .cap{margin:0 0 6px;font-size:13.5px;color:var(--ink-2)}
-.card .cap b{color:var(--ink);font-weight:600}
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow);margin:28px 0 44px}
+.result>div{padding:22px 24px;border-right:1px solid var(--border)}
+.result>div:last-child{border-right:0}
+.result .lab{font-size:12px;color:var(--muted);font-family:"IBM Plex Mono";letter-spacing:.08em;text-transform:uppercase}
+.result .val{font-family:"Space Grotesk";font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:6px 0 4px}
+.result .val.up{color:var(--s3)}
+.result .sub{font-size:13px;color:var(--ink-2)}
+
+.step{display:grid;grid-template-columns:200px 1fr;gap:28px;padding:34px 0;border-top:1px solid var(--border)}
+.step .side{position:sticky;top:24px;align-self:start}
+.step .n{font-family:"IBM Plex Mono";font-size:12px;color:var(--s1);letter-spacing:.14em;text-transform:uppercase}
+.step h2{font-size:24px;letter-spacing:-.02em;margin:6px 0 10px;line-height:1.2}
+.step .why{font-size:14.5px;color:var(--ink-2);margin:0}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:18px 18px 8px;position:relative;overflow:hidden}
+.panel::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--accent-grad)}
+.panel+.panel{margin-top:16px}
+.panel h3{margin:4px 0 2px;font-size:16px;letter-spacing:-.01em}
+.panel .cap{margin:0 0 6px;font-size:13.5px;color:var(--ink-2)}
+.panel .cap b{color:var(--ink);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .plot{width:100%;height:300px}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-2);margin:2px 0 8px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:18px;height:3px;border-radius:2px;background:var(--s1);display:inline-block}
-.sw.s2{background:var(--s2)}.sw.s3{background:var(--s3)}.sw.m{background:var(--muted)}
-.sw.dash{background:repeating-linear-gradient(90deg,var(--s2) 0 5px,transparent 5px 8px)}
-.sw.dotm{width:9px;height:9px;border-radius:50%;background:var(--s3)}
+.sw.m{background:var(--muted)}.sw.dash{background:repeating-linear-gradient(90deg,var(--s2) 0 5px,transparent 5px 8px)}
 
-/* controls */
-.ctl{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;padding:12px 14px;border-radius:12px;background:var(--surface-2);margin:8px 0 10px}
-.ctl label{font-size:13px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;min-width:220px;flex:1}
+.ctl{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;padding:14px 16px;border-radius:10px;background:var(--surface-2);margin:8px 0 10px}
+.ctl label{font-size:13px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px;min-width:240px;flex:1}
 .ctl label b{color:var(--ink);font-weight:600;font-size:14px}
-.ctl output{font-variant-numeric:tabular-nums;color:var(--s1);font-weight:600}
+.ctl output{font-family:"IBM Plex Mono";color:var(--s1);font-weight:500}
 input[type=range]{width:100%;accent-color:var(--s1)}
 .readout{display:flex;flex-wrap:wrap;gap:18px;font-size:13.5px;color:var(--ink-2)}
-.readout b{color:var(--ink);font-variant-numeric:tabular-nums}
-.pill{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--s1-soft);color:var(--s1);font-weight:600;font-size:12.5px}
+.readout b{color:var(--ink);font-family:"IBM Plex Mono";font-weight:500}
 
-details{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:0 20px;margin-top:16px}
-summary{cursor:pointer;padding:16px 0;font-weight:600;list-style:none;display:flex;align-items:center;gap:10px}
+details{border:1px solid var(--border);border-radius:12px;padding:0 20px;background:var(--surface)}
+summary{cursor:pointer;padding:16px 0;font-weight:600;list-style:none;font-family:"Space Grotesk"}
 summary::-webkit-details-marker{display:none}
-summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .2s;margin-left:4px}
-details[open] summary::before{transform:rotate(45deg)}
+summary::after{content:"+";float:right;color:var(--s1);font-size:20px;line-height:1}
+details[open] summary::after{content:"−"}
 details .body{padding:0 0 18px;color:var(--ink-2);font-size:15px}
-details ol{padding-left:20px;margin:6px 0}
-details li{margin:6px 0}
-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:var(--surface-2);padding:1px 6px;border-radius:6px}
-.repo{display:inline-flex;align-items:center;gap:8px;margin-top:18px;font-weight:500}
-.repo svg{width:18px;height:18px;fill:currentColor}
-
-footer{padding:40px 0 60px;color:var(--muted);font-size:13.5px;border-top:1px solid var(--border);margin-top:30px}
-hr.sep{border:0;border-top:1px solid var(--border);margin:0}
-
-@media (max-width:760px){
-  .tiles{grid-template-columns:1fr}.grid{grid-template-columns:1fr}
-  .nav .links{display:none}.hero{padding:48px 0 28px}.plot{height:260px}
+details ol{padding-left:20px;margin:6px 0}details li{margin:6px 0}
+code{font-family:"IBM Plex Mono";font-size:.88em;background:var(--surface-2);padding:1px 6px;border-radius:6px}
+.links{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.links a{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);font-weight:500;font-size:14px}
+.links a.primary{background:var(--s1);color:#fff;border-color:transparent}
+.links a:hover{text-decoration:none;filter:brightness(1.05)}
+.links svg{width:16px;height:16px;fill:currentColor}
+footer{padding:44px 0 60px;color:var(--muted);font-size:13px;border-top:1px solid var(--border);margin-top:40px}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;gap:22px;padding:44px 0 30px}
+  .result{grid-template-columns:1fr}.result>div{border-right:0;border-bottom:1px solid var(--border)}.result>div:last-child{border-bottom:0}
+  .step{grid-template-columns:1fr;gap:14px}.step .side{position:static}.two{grid-template-columns:1fr}.plot{height:260px}
 }
 </style>
 </head>
 <body>
-
-<nav class="nav"><div class="wrap">
-  <span class="brand">Signal Processing Portfolio</span>
-  <div class="links"><a href="#p1">Project 1</a><a href="#p2">Project 2</a><a href="https://github.com/m0hit-tvm" target="_blank" rel="noopener">GitHub</a></div>
-  <button class="btn" id="theme" aria-label="Toggle dark mode">Theme</button>
-</div></nav>
-
-<header class="hero"><div class="wrap">
-  <div class="eyebrow">Digital signal processing · Python</div>
-  <h1>Turning noisy measurements<br>into clear answers.</h1>
-  <p class="lede">Two small, complete projects. Every chart below is live: hover for values, drag the sliders to change the physics and watch the result update.</p>
-  <div class="chips">
-    <a class="chip" href="#p1"><span class="dot"></span>Cleaning a noisy sensor signal</a>
-    <a class="chip two" href="#p2"><span class="dot"></span>Hearing how a machine part vibrates</a>
-  </div>
-</div></header>
-
-<hr class="sep">
-
-<!-- ================= PROJECT 1 ================= -->
-<section class="project" id="p1"><div class="wrap">
-  <div class="phead">
-    <div class="num">Project 1 · Digital filtering</div>
-    <h2>Cleaning a noisy sensor signal</h2>
-    <p class="story">A sensor is supposed to report a smooth 50 Hz wave. What it actually records is buried under electrical interference and random noise. The task: recover the real signal without distorting it.</p>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="page">
+<div class="wrap">
+  <div class="top">
+    <div class="id"><i></i>FIR Noise Filter</div>
+    <div class="right">
+      <a class="btn ghost" href="hammer-test/">Next project: Hammer test →</a>
+      <button class="btn" id="theme" aria-label="Toggle dark mode">Theme</button>
+    </div>
   </div>
 
-  <div class="tiles">
-    <div class="tile"><div class="lab">Signal clarity before</div><div class="val" id="t1-before">—</div><div class="sub">signal-to-noise ratio, measured signal</div></div>
-    <div class="tile"><div class="lab">Signal clarity after</div><div class="val good" id="t1-after">—</div><div class="sub">after the filter, same signal</div></div>
-    <div class="tile"><div class="lab">Interference removed</div><div class="val" id="t1-att">—</div><div class="sub">the 120 Hz hum is cut by over 99.9 %</div></div>
+  <header class="hero">
+    <div>
+      <div class="kicker">Digital signal processing · Python</div>
+      <h1>Pulling a clean signal<br>out of the <em>noise</em>.</h1>
+      <p class="lede">A sensor is meant to report a smooth 50 Hz wave. What it actually records is buried under electrical hum and random noise. This page shows how a filter designed from first principles recovers the real signal, and lets you tune it yourself.</p>
+    </div>
+    <div class="specs">
+      <div class="spec"><div class="k">Sample rate</div><div class="v">1000 samples / s</div></div>
+      <div class="spec"><div class="k">Wanted signal</div><div class="v">50 Hz tone</div></div>
+      <div class="spec"><div class="k">Interference</div><div class="v">120 Hz hum + white noise</div></div>
+      <div class="spec"><div class="k">Filter</div><div class="v">101-tap FIR low-pass, 80 Hz</div></div>
+    </div>
+  </header>
+
+  <div class="result">
+    <div><div class="lab">Clarity before</div><div class="val" id="t-before">—</div><div class="sub">signal-to-noise ratio of the raw recording</div></div>
+    <div><div class="lab">Clarity after</div><div class="val up" id="t-after">—</div><div class="sub">same recording, after the filter</div></div>
+    <div><div class="lab">Hum removed</div><div class="val" id="t-att">—</div><div class="sub">the 120 Hz interference is cut by over 99.9 %</div></div>
   </div>
 
-  <div class="grid">
-    <div class="card full">
+  <section class="step">
+    <div class="side"><div class="n">01 · Observe</div><h2>What the sensor saw</h2><p class="why">Grey is the raw recording. Orange is the signal we were hoping for. The job is to turn grey into orange without bending it.</p></div>
+    <div class="panel">
       <h3>Before and after, in time</h3>
-      <p class="cap">Grey is what the sensor recorded. Blue is after cleaning. Orange is the true signal we were trying to recover. <b>Blue sitting on top of orange means the filter worked.</b></p>
+      <p class="cap"><b>Blue sitting on top of orange means the filter worked.</b> Hover anywhere to read the values.</p>
       <div class="legend"><span><i class="sw m"></i>measured</span><span><i class="sw"></i>filtered</span><span><i class="sw dash"></i>true signal</span></div>
-      <div class="plot" id="c1-time"></div>
+      <div class="plot" id="c-time"></div>
     </div>
-    <div class="card">
-      <h3>What frequencies are inside the signal</h3>
-      <p class="cap">Think of this as a recipe list. The 50 Hz spike is the signal we want; the 120 Hz spike is interference. <b>After filtering, only the 50 Hz spike remains.</b></p>
-      <div class="legend"><span><i class="sw m"></i>measured</span><span><i class="sw"></i>filtered</span></div>
-      <div class="plot" id="c1-spec"></div>
+  </section>
+
+  <section class="step">
+    <div class="side"><div class="n">02 · Diagnose</div><h2>What's inside the signal</h2><p class="why">A Fourier transform lists the ingredients: how much of each frequency is present. Two sharp spikes stand out above the noise floor.</p></div>
+    <div class="two">
+      <div class="panel">
+        <h3>Frequency recipe</h3>
+        <p class="cap">50 Hz is the signal we want. 120 Hz is the hum. <b>After filtering, only the 50 Hz spike survives.</b></p>
+        <div class="legend"><span><i class="sw m"></i>measured</span><span><i class="sw"></i>filtered</span></div>
+        <div class="plot" id="c-spec"></div>
+      </div>
+      <div class="panel">
+        <h3>The filter's gate</h3>
+        <p class="cap">Left of the cutoff everything passes untouched. Right of it, everything is blocked. <b>The slider below moves the gate.</b></p>
+        <div class="legend"><span><i class="sw"></i>how much gets through (dB)</span></div>
+        <div class="plot" id="c-resp"></div>
+      </div>
     </div>
-    <div class="card">
-      <h3>The filter's "gate"</h3>
-      <p class="cap">Frequencies left of the cutoff pass through untouched. Everything to the right is blocked. <b>Move the slider to change where the gate closes.</b></p>
-      <div class="legend"><span><i class="sw"></i>how much gets through (dB)</span></div>
-      <div class="plot" id="c1-resp"></div>
-    </div>
-    <div class="card full">
-      <h3>Try it yourself</h3>
-      <p class="cap">Set the cutoff too high and the 120 Hz hum leaks back in. Set it too close to 50 Hz and the wanted signal starts to shrink. All three charts above react instantly.</p>
+  </section>
+
+  <section class="step">
+    <div class="side"><div class="n">03 · Tune</div><h2>Try it yourself</h2><p class="why">Push the cutoff too high and the hum leaks back in. Pull it too close to 50 Hz and the wanted signal starts to shrink. Every chart on this page reacts instantly.</p></div>
+    <div class="panel">
+      <h3>Filter cutoff</h3>
       <div class="ctl">
-        <label><b>Filter cutoff</b><input type="range" id="cut" min="55" max="250" step="1" value="80"><span><output id="cut-out">80</output> Hz</span></label>
-        <div class="readout"><span>Clarity after: <b id="r1-snr">—</b></span><span>120 Hz hum: <b id="r1-att">—</b></span><span>50 Hz signal kept: <b id="r1-keep">—</b></span></div>
+        <label><b>Cutoff frequency</b><input type="range" id="cut" min="55" max="250" step="1" value="80"><span><output id="cut-out">80</output> Hz</span></label>
+        <div class="readout"><span>Clarity after: <b id="r-snr">—</b></span><span>120 Hz hum: <b id="r-att">—</b></span><span>50 Hz signal kept: <b id="r-keep">—</b></span></div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <details>
-    <summary>How it works (for the technically curious)</summary>
-    <div class="body">
-      <ol>
-        <li>The sensor is sampled 1000 times per second. A Fourier transform turns the recording into its frequency "recipe", which shows a 50 Hz tone, a 120 Hz tone and a flat noise floor.</li>
-        <li>A low-pass FIR filter is designed with the windowed-sinc method: the ideal filter's impulse response is truncated to 101 taps and shaped with a Hamming window. The taps match <code>scipy.signal.firwin</code> to machine precision.</li>
-        <li>The filter is applied by direct convolution. Because the taps are symmetric, every frequency is delayed by exactly 50 samples, so the output is shifted back to line up with the input.</li>
-        <li>Quality is scored as a signal-to-noise ratio against the known clean signal. The jump from about 4 dB to about 16 dB is a 16x reduction in error power.</li>
-      </ol>
-    </div>
-  </details>
-  <a class="repo" href="https://github.com/m0hit-tvm/fir-noise-filter" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>View the code on GitHub</a>
-</div></section>
-
-<hr class="sep">
-
-<!-- ================= PROJECT 2 ================= -->
-<section class="project" id="p2"><div class="wrap">
-  <div class="phead">
-    <div class="num">Project 2 · Mechanical vibration</div>
-    <h2>Hearing how a machine part vibrates from a single tap</h2>
-    <p class="story">Tap a wine glass and it rings at its own note, then fades. Machine parts do the same. From one hammer tap and a noisy accelerometer, the program works out the part's natural frequency and how quickly it stops ringing, two numbers engineers need to avoid destructive resonance.</p>
-  </div>
-
-  <div class="tiles">
-    <div class="tile"><div class="lab">Natural frequency found</div><div class="val" id="t2-fn">—</div><div class="sub">true value <b id="t2-fn-true"></b>, within 0.1 %</div></div>
-    <div class="tile"><div class="lab">Damping found</div><div class="val" id="t2-z">—</div><div class="sub">true value <b id="t2-z-true"></b>, within 1 %</div></div>
-    <div class="tile"><div class="lab">Resonance amplification</div><div class="val" id="t2-q">—</div><div class="sub">shaking it at its natural frequency multiplies the motion by this much</div></div>
-  </div>
-
-  <div class="grid">
-    <div class="card full">
-      <h3>The ring-down after the tap</h3>
-      <p class="cap">Grey is the noisy sensor reading. Blue is the true motion. Green dots are the peaks the program picked out. <b>How fast the peaks shrink tells us the damping; how far apart they are tells us the frequency.</b></p>
-      <div class="legend"><span><i class="sw m"></i>measured</span><span><i class="sw"></i>true motion</span><span><i class="sw dotm"></i>detected peaks</span></div>
-      <div class="plot" id="c2-ring"></div>
-    </div>
-    <div class="card">
-      <h3>The part's "note"</h3>
-      <p class="cap">The frequency spectrum of the ring-down has one sharp peak: the natural frequency. <b>The width of the peak at the dotted line is a second, independent way to read the damping.</b></p>
-      <div class="legend"><span><i class="sw"></i>spectrum</span><span><i class="sw dash"></i>half-power level</span></div>
-      <div class="plot" id="c2-fft"></div>
-    </div>
-    <div class="card">
-      <h3>How the part responds to shaking</h3>
-      <p class="cap">If you shake the part at different speeds, this is how much it moves. <b>The spike is resonance: the part moves 21x more than it would if pushed slowly.</b></p>
-      <div class="legend"><span><i class="sw"></i>motion per unit force</span></div>
-      <div class="plot" id="c2-frf"></div>
-    </div>
-    <div class="card full">
-      <h3>What if the part were different?</h3>
-      <p class="cap">Change the stiffness and damping to see how the ring-down and the resonance peak respond. Stiffer parts ring at a higher note; more damping makes the ring fade faster and tames the resonance.</p>
-      <div class="ctl">
-        <label><b>Stiffness k</b><input type="range" id="kk" min="2000" max="20000" step="100" value="8000"><span><output id="kk-out">8000</output> N/m</span></label>
-        <label><b>Damping c</b><input type="range" id="cc" min="1" max="60" step="1" value="6"><span><output id="cc-out">6</output> N·s/m</span></label>
-        <div class="readout"><span>Natural frequency: <b id="r2-fn">—</b></span><span>Damping ratio: <b id="r2-z">—</b></span><span>Amplification: <b id="r2-q">—</b></span></div>
-      </div>
-      <div class="grid" style="margin-top:6px">
-        <div><div class="legend"><span><i class="sw s2"></i>ring-down with your settings</span><span><i class="sw m"></i>original part</span></div><div class="plot" id="c2-what-ring"></div></div>
-        <div><div class="legend"><span><i class="sw s2"></i>response with your settings</span><span><i class="sw m"></i>original part</span></div><div class="plot" id="c2-what-frf"></div></div>
+  <section class="step">
+    <div class="side"><div class="n">04 · Under the hood</div><h2>How it works</h2><p class="why">For readers who want the engineering.</p></div>
+    <div>
+      <details open>
+        <summary>Method, in four steps</summary>
+        <div class="body"><ol>
+          <li>The sensor is sampled 1000 times per second. A Hann-windowed FFT turns the recording into its frequency content: a 50 Hz tone, a 120 Hz tone and a flat noise floor.</li>
+          <li>A low-pass FIR filter is designed with the windowed-sinc method: the ideal filter's impulse response is truncated to 101 taps and shaped with a Hamming window. The taps match <code>scipy.signal.firwin</code> to machine precision.</li>
+          <li>The filter is applied by direct convolution. Because the taps are symmetric, every frequency is delayed by exactly 50 samples, so the output is shifted back to line up with the input.</li>
+          <li>Quality is scored as a signal-to-noise ratio against the known clean signal. The jump from about 4 dB to about 16 dB is a 16x reduction in error power.</li>
+        </ol></div>
+      </details>
+      <div class="links">
+        <a class="primary" href="https://github.com/m0hit-tvm/fir-noise-filter" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Source code</a>
+        <a href="hammer-test/">Next project: Hammer test →</a>
       </div>
     </div>
-  </div>
-
-  <details>
-    <summary>How it works (for the technically curious)</summary>
-    <div class="body">
-      <ol>
-        <li>The part is modelled as a mass-spring-damper: m = 2 kg, k = 8000 N/m, c = 6 N·s/m. Theory gives a natural frequency of 10.07 Hz and a damping ratio of 0.0237.</li>
-        <li>The hammer hit is a 2 ms half-sine pulse. The equation of motion is integrated numerically and 10 % sensor noise is added to make a realistic "measurement".</li>
-        <li>The natural frequency is read from the peak of a zero-padded FFT of the ring-down. No window is used, because a decaying signal is already its own window.</li>
-        <li>Damping is estimated two ways: the logarithmic decrement (a least-squares fit to how the peaks shrink) and the half-power bandwidth of the FFT peak. Both land within about 1 % of the true value.</li>
-        <li>The frequency response function X/F = 1 / (k − mω² + jcω) shows the resonance and its amplification factor Q = 1/(2ζ).</li>
-      </ol>
-    </div>
-  </details>
-  <a class="repo" href="https://github.com/m0hit-tvm/hammer-test" target="_blank" rel="noopener"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>View the code on GitHub</a>
-</div></section>
-
-<footer><div class="wrap">Built with Python (NumPy, SciPy, Matplotlib) for the analysis and Plotly for the interactive charts. All numbers on this page are produced by the linked programs.</div></footer>
+  </section>
+</div>
+<footer><div class="wrap">Analysis in Python (NumPy, SciPy, Matplotlib). Interactive charts with Plotly. Every number on this page is produced by the linked program.</div></footer>
+</div>
 
 <script src="data.js"></script>
 <script>
 (function(){
-const D = window.DATA;
-const $ = id => document.getElementById(id);
+const F=window.DATA, $=id=>document.getElementById(id), root=document.documentElement;
+try{const s=localStorage.getItem('theme');if(s)root.dataset.theme=s;}catch(e){}
+const css=n=>getComputedStyle(root).getPropertyValue(n).trim();
+$('theme').addEventListener('click',()=>{const dark=getComputedStyle(root).colorScheme.includes('dark');root.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}render();});
 
-/* ---------- theme ---------- */
-const root = document.documentElement;
-try{ const s = localStorage.getItem('theme'); if(s) root.dataset.theme = s; }catch(e){}
-$('theme').addEventListener('click', ()=>{
-  const dark = getComputedStyle(root).colorScheme.includes('dark');
-  root.dataset.theme = dark ? 'light' : 'dark';
-  try{ localStorage.setItem('theme', root.dataset.theme); }catch(e){}
-  renderAll();
-});
-const css = n => getComputedStyle(root).getPropertyValue(n).trim();
+/* ---- background: oscilloscope trace that cleans up as you scroll ---- */
+const cv=$('bg'),ctx=cv.getContext('2d');let W,Hh,ph=0;
+function size(){W=cv.width=innerWidth*devicePixelRatio;Hh=cv.height=innerHeight*devicePixelRatio;}
+addEventListener('resize',size);size();
+const noise=Float32Array.from({length:4096},()=>Math.random()*2-1);
+function frame(){
+  const doc=document.documentElement,prog=Math.min(1,scrollY/Math.max(1,doc.scrollHeight-innerHeight)),nz=(1-prog)*0.55;
+  ctx.clearRect(0,0,W,Hh);ctx.lineWidth=1.6*devicePixelRatio;ctx.strokeStyle=css('--wave');
+  for(let k=0;k<3;k++){ctx.beginPath();const y0=Hh*(0.25+0.25*k),amp=Hh*0.07,ph2=ph*(1+0.3*k);
+    for(let x=0;x<W;x+=3*devicePixelRatio){const u=x/W*14+ph2;const n=noise[(Math.floor(x/(3*devicePixelRatio))+k*600+Math.floor(ph*40))&4095];
+      const y=y0+amp*(Math.sin(u)+0.5*nz*Math.sin(2.4*u+1)+nz*n);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();}
+  ph+=0.008;requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 
-/* ---------- plotly helpers ---------- */
-function layout(extra){
-  const base = {
-    margin:{l:52,r:14,t:8,b:44}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-    font:{family:'Inter, system-ui, sans-serif', size:12, color:css('--muted')},
-    hovermode:'x unified', hoverlabel:{bgcolor:css('--surface'), bordercolor:css('--border'), font:{color:css('--ink'), size:12}},
-    showlegend:false,
-    xaxis:{gridcolor:css('--grid'), zerolinecolor:css('--axis'), linecolor:css('--axis'), ticks:'', title:{standoff:8}},
-    yaxis:{gridcolor:css('--grid'), zerolinecolor:css('--axis'), linecolor:css('--axis'), ticks:'', title:{standoff:8}},
-  };
-  const out = Object.assign({}, base, extra||{});
-  out.xaxis = Object.assign({}, base.xaxis, (extra&&extra.xaxis)||{});
-  out.yaxis = Object.assign({}, base.yaxis, (extra&&extra.yaxis)||{});
-  return out;
-}
-const cfg = {displayModeBar:false, responsive:true};
-const line = (x,y,name,color,extra)=>Object.assign({x,y,name,type:'scatter',mode:'lines',line:{color,width:2},hovertemplate:'%{y:.3f}<extra>'+name+'</extra>'},extra||{});
+/* ---- DSP ---- */
+function hamming(n){const w=new Float64Array(n);for(let i=0;i<n;i++)w[i]=0.54-0.46*Math.cos(2*Math.PI*i/(n-1));return w;}
+const sinc=x=>x===0?1:Math.sin(Math.PI*x)/(Math.PI*x);
+function design(taps,fc,fs){const h=new Float64Array(taps),m=(taps-1)/2,w=hamming(taps),f=fc/fs;let s=0;for(let n=0;n<taps;n++){h[n]=2*f*sinc(2*f*(n-m))*w[n];s+=h[n];}for(let n=0;n<taps;n++)h[n]/=s;return h;}
+function apply(x,h){const N=x.length,L=h.length,d=(L-1)>>1,y=new Float64Array(N);for(let n=0;n<N;n++){let a=0;for(let k=0;k<L;k++){const i=n+d-k;if(i>=0&&i<N)a+=h[k]*x[i];}y[n]=a;}return y;}
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+  for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let j=0;j<len/2;j++){const a=i+j,b=a+len/2,tr=re[b]*cr-im[b]*ci,ti=re[b]*ci+im[b]*cr;re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t;}}}}
+function spectrum(x,fs){const n=x.length,N=1<<Math.ceil(Math.log2(n)),re=new Float64Array(N),im=new Float64Array(N);let ws=0;for(let i=0;i<n;i++){const w=0.5-0.5*Math.cos(2*Math.PI*i/(n-1));re[i]=x[i]*w;ws+=w;}fft(re,im);const f=[],a=[];for(let k=0;k<=N/2;k++){f.push(k*fs/N);a.push(2*Math.hypot(re[k],im[k])/ws);}a[0]/=2;return{f,a};}
+function respAt(h,fs,f0){const w=2*Math.PI*f0/fs;let re=0,im=0;for(let k=0;k<h.length;k++){re+=h[k]*Math.cos(w*k);im-=h[k]*Math.sin(w*k);}return 20*Math.log10(Math.hypot(re,im)+1e-12);}
+function resp(h,fs,n){const f=[],db=[];for(let i=0;i<n;i++){const fr=i/(n-1)*fs/2;f.push(fr);db.push(respAt(h,fs,fr));}return{f,db};}
+function snr(ref,est,e){let s=0,q=0;for(let i=e;i<ref.length-e;i++){s+=ref[i]*ref[i];const d=est[i]-ref[i];q+=d*d;}return 10*Math.log10(s/q);}
 
-/* ---------- DSP in JS ---------- */
-function hamming(n){ const w=new Float64Array(n); for(let i=0;i<n;i++) w[i]=0.54-0.46*Math.cos(2*Math.PI*i/(n-1)); return w; }
-function sinc(x){ return x===0?1:Math.sin(Math.PI*x)/(Math.PI*x); }
-function designLowpass(taps, fc, fs){
-  const h=new Float64Array(taps), m=(taps-1)/2, w=hamming(taps), f=fc/fs; let s=0;
-  for(let n=0;n<taps;n++){ h[n]=2*f*sinc(2*f*(n-m))*w[n]; s+=h[n]; }
-  for(let n=0;n<taps;n++) h[n]/=s; return h;
-}
-function applyFir(x,h){
-  const N=x.length, L=h.length, d=(L-1)>>1, y=new Float64Array(N);
-  for(let n=0;n<N;n++){ let acc=0; const i0=n+d; for(let k=0;k<L;k++){ const i=i0-k; if(i>=0&&i<N) acc+=h[k]*x[i]; } y[n]=acc; }
-  return y;
-}
-function fft(re,im){ // in-place radix-2
-  const n=re.length; for(let i=1,j=0;i<n;i++){ let bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit; if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];} }
-  for(let len=2;len<=n;len<<=1){ const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
-    for(let i=0;i<n;i+=len){ let cr=1,ci=0; for(let j=0;j<len/2;j++){ const a=i+j,b=a+len/2; const tr=re[b]*cr-im[b]*ci, ti=re[b]*ci+im[b]*cr; re[b]=re[a]-tr; im[b]=im[a]-ti; re[a]+=tr; im[a]+=ti; const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr; } } }
-}
-function spectrum(x,fs){ // Hann-windowed single-sided amplitude
-  const n=x.length, N=1<<Math.ceil(Math.log2(n)); const re=new Float64Array(N), im=new Float64Array(N); let ws=0;
-  for(let i=0;i<n;i++){ const w=0.5-0.5*Math.cos(2*Math.PI*i/(n-1)); re[i]=x[i]*w; ws+=w; }
-  fft(re,im); const f=[],a=[]; for(let k=0;k<=N/2;k++){ f.push(k*fs/N); a.push(2*Math.hypot(re[k],im[k])/ws); } a[0]/=2; return {f,a};
-}
-function freqResp(h,fs,npts){ const f=[],db=[]; for(let i=0;i<npts;i++){ const fr=i/(npts-1)*fs/2, w=2*Math.PI*fr/fs; let re=0,im=0; for(let k=0;k<h.length;k++){ re+=h[k]*Math.cos(w*k); im-=h[k]*Math.sin(w*k);} f.push(fr); db.push(20*Math.log10(Math.hypot(re,im)+1e-12)); } return {f,db}; }
-function snr(ref,est,edge){ let s=0,e=0; for(let i=edge;i<ref.length-edge;i++){ s+=ref[i]*ref[i]; const d=est[i]-ref[i]; e+=d*d; } return 10*Math.log10(s/e); }
-function respAt(h,fs,f0){ const w=2*Math.PI*f0/fs; let re=0,im=0; for(let k=0;k<h.length;k++){re+=h[k]*Math.cos(w*k); im-=h[k]*Math.sin(w*k);} return 20*Math.log10(Math.hypot(re,im)); }
+/* ---- plotly ---- */
+function layout(x){const b={margin:{l:52,r:14,t:8,b:44},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{family:'IBM Plex Sans, system-ui, sans-serif',size:12,color:css('--muted')},hovermode:'x unified',hoverlabel:{bgcolor:css('--surface'),bordercolor:css('--border'),font:{color:css('--ink'),size:12,family:'IBM Plex Mono'}},showlegend:false,
+  xaxis:{gridcolor:css('--grid'),zerolinecolor:css('--axis'),linecolor:css('--axis'),ticks:'',title:{standoff:8}},yaxis:{gridcolor:css('--grid'),zerolinecolor:css('--axis'),linecolor:css('--axis'),ticks:'',title:{standoff:8}}};
+  const o=Object.assign({},b,x||{});o.xaxis=Object.assign({},b.xaxis,(x&&x.xaxis)||{});o.yaxis=Object.assign({},b.yaxis,(x&&x.yaxis)||{});return o;}
+const cfg={displayModeBar:false,responsive:true};
+const line=(x,y,name,color,extra)=>Object.assign({x,y,name,type:'scatter',mode:'lines',line:{color,width:2},hovertemplate:'%{y:.3f}<extra>'+name+'</extra>'},extra||{});
 
-/* ---------- Project 1 ---------- */
-const F=D.fir, fs1=F.fs, t1=F.measured.map((_,i)=>i/fs1), specM=spectrum(F.measured,fs1);
-$('t1-before').textContent=F.snr_before.toFixed(1)+' dB';
-$('t1-after').textContent=F.snr_after.toFixed(1)+' dB';
-$('t1-att').textContent=F.att_120.toFixed(0)+' dB';
-
-function renderP1(){
-  const fc=+$('cut').value; $('cut-out').textContent=fc;
-  const h=designLowpass(101,fc,fs1), y=applyFir(F.measured,h), specF=spectrum(Array.from(y),fs1), fr=freqResp(h,fs1,600);
-  const n=200, sl=a=>Array.from(a).slice(0,n);
-  Plotly.react('c1-time',[
-    line(t1.slice(0,n),sl(F.measured),'measured',css('--muted'),{line:{color:css('--muted'),width:1}}),
-    line(t1.slice(0,n),sl(F.clean),'true signal',css('--s2'),{line:{color:css('--s2'),width:2,dash:'dash'}}),
-    line(t1.slice(0,n),sl(y),'filtered',css('--s1')),
-  ],layout({xaxis:{title:'time (s)'},yaxis:{title:'amplitude',range:[-2.2,2.2]}}),cfg);
+const fs=F.fs,t=F.measured.map((_,i)=>i/fs),specM=spectrum(F.measured,fs);
+$('t-before').textContent=F.snr_before.toFixed(1)+' dB';$('t-after').textContent=F.snr_after.toFixed(1)+' dB';$('t-att').textContent=F.att_120.toFixed(0)+' dB';
+function render(){
+  const fc=+$('cut').value;$('cut-out').textContent=fc;
+  const h=design(101,fc,fs),y=apply(F.measured,h),specF=spectrum(Array.from(y),fs),fr=resp(h,fs,600),n=200,sl=a=>Array.from(a).slice(0,n);
+  Plotly.react('c-time',[line(t.slice(0,n),sl(F.measured),'measured',css('--muted'),{line:{color:css('--muted'),width:1}}),line(t.slice(0,n),sl(F.clean),'true signal',css('--s2'),{line:{color:css('--s2'),width:2,dash:'dash'}}),line(t.slice(0,n),sl(y),'filtered',css('--s1'))],layout({xaxis:{title:'time (s)'},yaxis:{title:'amplitude',range:[-2.2,2.2]}}),cfg);
   const lim=specM.f.findIndex(v=>v>260);
-  Plotly.react('c1-spec',[
-    line(specM.f.slice(0,lim),specM.a.slice(0,lim),'measured',css('--muted'),{line:{color:css('--muted'),width:1.5}}),
-    line(specF.f.slice(0,lim),specF.a.slice(0,lim),'filtered',css('--s1'),{fill:'tozeroy',fillcolor:css('--s1-soft')}),
-  ],layout({xaxis:{title:'frequency (Hz)'},yaxis:{title:'strength',rangemode:'tozero'}}),cfg);
-  Plotly.react('c1-resp',[
-    line(fr.f,fr.db,'gain',css('--s1'),{hovertemplate:'%{y:.1f} dB<extra></extra>'}),
-    {x:[fc,fc],y:[-100,5],mode:'lines',line:{color:css('--s2'),width:1.5,dash:'dot'},hoverinfo:'skip'},
-  ],layout({xaxis:{title:'frequency (Hz)'},yaxis:{title:'gain (dB)',range:[-100,5]},hovermode:'x'}),cfg);
-  $('r1-snr').textContent=snr(F.clean,y,101).toFixed(1)+' dB';
-  $('r1-att').textContent=(Math.round(respAt(h,fs1,120))||0)+' dB';
-  $('r1-keep').textContent=(100*Math.pow(10,respAt(h,fs1,50)/20)).toFixed(0)+' %';
+  Plotly.react('c-spec',[line(specM.f.slice(0,lim),specM.a.slice(0,lim),'measured',css('--muted'),{line:{color:css('--muted'),width:1.5}}),line(specF.f.slice(0,lim),specF.a.slice(0,lim),'filtered',css('--s1'),{fill:'tozeroy',fillcolor:css('--s1-soft')})],layout({xaxis:{title:'frequency (Hz)'},yaxis:{title:'strength',rangemode:'tozero'}}),cfg);
+  Plotly.react('c-resp',[line(fr.f,fr.db,'gain',css('--s1'),{hovertemplate:'%{y:.1f} dB<extra></extra>'}),{x:[fc,fc],y:[-100,5],mode:'lines',line:{color:css('--s2'),width:1.5,dash:'dot'},hoverinfo:'skip'}],layout({xaxis:{title:'frequency (Hz)'},yaxis:{title:'gain (dB)',range:[-100,5]},hovermode:'x'}),cfg);
+  $('r-snr').textContent=snr(F.clean,y,101).toFixed(1)+' dB';$('r-att').textContent=(Math.round(respAt(h,fs,120))||0)+' dB';$('r-keep').textContent=(100*Math.pow(10,respAt(h,fs,50)/20)).toFixed(0)+' %';
 }
-$('cut').addEventListener('input',renderP1);
-
-/* ---------- Project 2 ---------- */
-const H=D.hammer, E=H.est;
-const Q=1/(2*H.zeta);
-$('t2-fn').textContent=E.f_fft.toFixed(2)+' Hz'; $('t2-fn-true').textContent=H.fn.toFixed(2)+' Hz';
-$('t2-z').textContent=E.zeta_hp.toFixed(4); $('t2-z-true').textContent=H.zeta.toFixed(4);
-$('t2-q').textContent=Q.toFixed(0)+'×';
-
-function sdof(m,k,c){ const wn=Math.sqrt(k/m), z=c/(2*Math.sqrt(k*m)); return {wn, fn:wn/(2*Math.PI), z, wd:wn*Math.sqrt(Math.max(0,1-z*z))}; }
-function ringdown(m,k,c,T,n){ const p=sdof(m,k,c), t=[],x=[]; for(let i=0;i<n;i++){ const tt=i*T/n; t.push(tt); x.push(Math.exp(-p.z*p.wn*tt)*Math.cos(p.wd*tt)); } return {t,x}; }
-function frf(m,k,c,fmax,n){ const f=[],a=[]; for(let i=0;i<n;i++){ const fr=0.05+i*fmax/n, w=2*Math.PI*fr; f.push(fr); a.push(1/Math.hypot(k-m*w*w,c*w)*k); } return {f,a}; } // normalised to static = 1
-
-function renderP2(){
-  Plotly.react('c2-ring',[
-    line(H.t,H.acc_meas,'measured',css('--muted'),{line:{color:css('--muted'),width:1}}),
-    line(H.t,H.acc_true,'true motion',css('--s1')),
-    {x:H.peaks_t,y:H.peaks_a,name:'peak',type:'scatter',mode:'markers',marker:{color:css('--s3'),size:9,line:{color:css('--surface'),width:2}},hovertemplate:'%{y:.2f}<extra>peak</extra>'},
-  ],layout({xaxis:{title:'time after tap (s)',range:[0,1.6]},yaxis:{title:'acceleration (m/s²)',range:[-2.6,2.6]}}),cfg);
-  Plotly.react('c2-fft',[
-    line(H.fft_f,H.fft_db,'spectrum',css('--s1'),{fill:'tozeroy',fillcolor:css('--s1-soft'),hovertemplate:'%{y:.1f} dB<extra>spectrum</extra>'}),
-    {x:[5,15],y:[-3,-3],mode:'lines',line:{color:css('--s2'),width:1.5,dash:'dash'},hoverinfo:'skip'},
-    {x:[E.f1,E.f2],y:[-3,-3],mode:'markers',marker:{color:css('--s2'),size:8},hovertemplate:'%{x:.2f} Hz<extra>half-power point</extra>'},
-  ],layout({xaxis:{title:'frequency (Hz)',range:[5,15]},yaxis:{title:'level (dB)',range:[-40,2]},hovermode:'x'}),cfg);
-  const base=frf(H.m,H.k,H.c,30,600);
-  Plotly.react('c2-frf',[ line(base.f,base.a,'amplification',css('--s1'),{hovertemplate:'%{y:.1f}× <extra>amplification</extra>'}) ],
-    layout({xaxis:{title:'shaking frequency (Hz)'},yaxis:{title:'amplification (× static)',type:'log'},hovermode:'x'}),cfg);
-  renderWhatIf();
-}
-function renderWhatIf(){
-  const k=+$('kk').value, c=+$('cc').value; $('kk-out').textContent=k; $('cc-out').textContent=c;
-  const p=sdof(H.m,k,c), r0=ringdown(H.m,H.k,H.c,2,600), r1=ringdown(H.m,k,c,2,600), f0=frf(H.m,H.k,H.c,40,800), f1=frf(H.m,k,c,40,800);
-  $('r2-fn').textContent=p.fn.toFixed(1)+' Hz'; $('r2-z').textContent=p.z.toFixed(3); $('r2-q').textContent=(p.z<1?(1/(2*p.z)).toFixed(1):'1.0')+'×';
-  Plotly.react('c2-what-ring',[
-    line(r0.t,r0.x,'original',css('--muted'),{line:{color:css('--muted'),width:1.5}}),
-    line(r1.t,r1.x,'yours',css('--s2')),
-  ],layout({xaxis:{title:'time after tap (s)'},yaxis:{title:'motion (relative)',range:[-1.05,1.05]}}),cfg);
-  Plotly.react('c2-what-frf',[
-    line(f0.f,f0.a,'original',css('--muted'),{line:{color:css('--muted'),width:1.5},hovertemplate:'%{y:.1f}×<extra>original</extra>'}),
-    line(f1.f,f1.a,'yours',css('--s2'),{hovertemplate:'%{y:.1f}×<extra>yours</extra>'}),
-  ],layout({xaxis:{title:'shaking frequency (Hz)'},yaxis:{title:'amplification (× static)',type:'log',range:[-1.3,1.8]},hovermode:'x'}),cfg);
-}
-$('kk').addEventListener('input',renderWhatIf); $('cc').addEventListener('input',renderWhatIf);
-
-function renderAll(){ renderP1(); renderP2(); }
-renderAll();
+$('cut').addEventListener('input',render);render();
 })();
 </script>
 </body>

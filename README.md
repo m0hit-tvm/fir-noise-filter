@@ -5,7 +5,9 @@ harmonic interference and broadband noise, using a linear-phase FIR low-pass
 filter designed from first principles in Python.
 
 **Interactive showcase:** https://m0hit-tvm.github.io/fir-noise-filter/
-(plain-language walkthrough with live charts; source in `docs/`).
+(plain-language walkthrough with live charts; source in `docs/`). The
+companion hammer-test page is served from the same site at
+https://m0hit-tvm.github.io/fir-noise-filter/hammer-test/.
 
 ![Result](plots/fir_filter.png)
 
